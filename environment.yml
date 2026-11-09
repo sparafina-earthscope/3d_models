@@ -1,0 +1,14 @@
+name: terrain-3d-model
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy
+  - tifffile>=2022
+  - pillow
+  - pyproj
+  - plotly
+  - panel>=1.9.3
+  - ipywidgets
+  - ipykernel
+  - nbformat>=4.2.0

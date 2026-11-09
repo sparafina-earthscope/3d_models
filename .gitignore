@@ -1,0 +1,7 @@
+*.tiff
+*.png
+*.zip
+*.stl
+.DS_Store
+.pynb_checkpoints
+__pycache__

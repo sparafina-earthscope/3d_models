@@ -1,0 +1,10 @@
+numpy
+tifffile>=2022
+pillow
+pyproj
+plotly
+panel>=1.9.3
+ipywidgets
+ipykernel
+nbformat>=4.2.0
+jupyterlab
