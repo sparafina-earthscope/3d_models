@@ -22,7 +22,10 @@ Both produce identical STL files.
 | `dem/` | Elevation data (DEMs) downloaded from USGS 3DEP, reused by later builds. |
 | `stl/` | Built STL files, and zipped copies made for email. |
 | `preview/` | Hillshade previews of the built models. |
+| `tiff/` | Other GeoTIFF files. The app and the notebook don't write to it. |
 | `emails.json` | A record of the emails the app has tried to send, created with the first one (see [Email log](#email-log)). |
+
+The app and the notebook create `dem/`, `stl/`, `preview/` and `tiff/` when they start, if they don't exist. Git doesn't keep empty folders, so a fresh clone doesn't have them.
 
 ## Running the app
 

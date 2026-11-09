@@ -22,7 +22,7 @@ except ModuleNotFoundError as e:
              "then start the app again the same way.")
 
 # in the project folder, next to app/; STL_DIR is served at stl/
-DEM_DIR, STL_DIR, PREVIEW_DIR = terrain.DEM_DIR, terrain.STL_DIR, terrain.PREVIEW_DIR
+DEM_DIR, STL_DIR, PREVIEW_DIR, TIFF_DIR = terrain.DEM_DIR, terrain.STL_DIR, terrain.PREVIEW_DIR, terrain.TIFF_DIR
 EMAIL_LOG = os.path.join(terrain.ROOT, 'emails.json')   # a record of every email the app tries to send
 
 # On JupyterHub, .../proxy/<port> without a trailing slash is proxied as '/', so the page's relative
@@ -215,7 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('--no-show', action='store_true', help="don't open a browser tab")
     args = parser.parse_args()
 
-    for d in (DEM_DIR, STL_DIR, PREVIEW_DIR):
+    for d in (DEM_DIR, STL_DIR, PREVIEW_DIR, TIFF_DIR):   # a fresh clone has none of them
         os.makedirs(d, exist_ok=True)
     hub_prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX')   # set on GeoLab and other JupyterHubs
     if hub_prefix:

@@ -30,6 +30,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEM_DIR = os.path.join(ROOT, 'dem')            # downloaded DEMs
 STL_DIR = os.path.join(ROOT, 'stl')            # STLs and zips
 PREVIEW_DIR = os.path.join(ROOT, 'preview')    # hillshade previews
+TIFF_DIR = os.path.join(ROOT, 'tiff')          # other GeoTIFFs
 
 TERRAIN_COLORS = [[0.0, '#4a7a46'], [0.35, '#9a9a5a'], [0.6, '#8c6d4f'], [0.85, '#b8a898'], [1.0, '#ffffff']]
 
