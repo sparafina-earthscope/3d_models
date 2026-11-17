@@ -107,9 +107,23 @@ def create_app():
         os.makedirs(PREVIEW_DIR, exist_ok=True)
         z = await asyncio.to_thread(terrain.write_stl, dem, terrain.PLACES[p][2] * 1000, e, stl,
                                     f'{p} {e:g}x terrain - USGS 3DEP')
+        status.object = 'Getting the earliest and latest Landsat NDVI…'
+        found = await asyncio.gather(*(asyncio.to_thread(terrain.download_ndvi, p, which, TIFF_DIR)
+                                       for which in ('earliest', 'latest')), return_exceptions=True)
+        ndvi_layers, ndvi_lines = [], []
+        for which, result in zip(('earliest', 'latest'), found):
+            layer = md_text(terrain.ndvi_layer_name(p, which))
+            if isinstance(result, Exception):    # the model is still usable without the layer
+                ndvi_lines.append(f'- {layer} unavailable: {md_text(str(result) or type(result).__name__)}')
+            elif isinstance(result, BaseException):
+                raise result
+            else:
+                ndvi_layers.append(result)
+                ndvi_lines.append(f'- {layer}: {md_text(terrain.ndvi_label(result[1]))}')
         status.object = 'Rendering the previews…'
         img = await asyncio.to_thread(terrain.hillshade, dem, res, png)
-        fig = await asyncio.to_thread(terrain.surface_figure, z, f'{p}, {e:g}x exaggeration')
+        fig = await asyncio.to_thread(terrain.surface_figure, terrain.grid_heights(dem), p, e,
+                                      f'{p}, {e:g}x exaggeration', ndvi_layers=ndvi_layers)
         view3d.object = fig
         preview.object = await asyncio.to_thread(terrain.png_bytes, img)
         size_km = terrain.PLACES[p][2]
@@ -119,7 +133,8 @@ def create_app():
         summary = (f'**{md_text(p)}**, {e:g}× exaggeration\n\n'
                    f'- Area: {size_km:g} × {size_km:g} km\n'
                    f'- Elevation: {dem.min():,.0f}–{dem.max():,.0f} m\n'
-                   f'- Model: {terrain.SIZE_MM:.0f} × {terrain.SIZE_MM:.0f} mm, {z.max():.1f} mm tall')
+                   f'- Model: {terrain.SIZE_MM:.0f} × {terrain.SIZE_MM:.0f} mm, {z.max():.1f} mm tall\n'
+                   + '\n'.join(ndvi_lines))
         status.object = summary
         built.update(key=(p, e), stl=stl, summary=summary)
         return stl, summary

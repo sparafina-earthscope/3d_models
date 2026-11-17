@@ -7,14 +7,14 @@ There are two ways to use it:
 - **The web app** (in `app/`) opens in its own browser tab, with the controls in a sidebar and the results beside them. You can download the STL or email it, zipped, to any address.
 - **The notebook** (`make_stl.ipynb`) does the same builds from a form inside Jupyter.
 
-Both produce identical STL files.
+Both produce identical STL files, and the same 3D view with its elevation and NDVI layers.
 
 ## Contents
 
 | File | Description |
 |---|---|
 | `app/app.py` | The web app. Run `python app/app.py` from the project folder. |
-| `app/terrain.py` | Model-building code used by the app: places, DEM download, STL, hillshade, 3D view. |
+| `app/terrain.py` | Model-building code used by the app: places, DEM download, STL, hillshade, NDVI, 3D view. The notebook uses its NDVI and 3D view code. |
 | `app/mailer.py` | Zips an STL and emails it. Used by the app. |
 | `make_stl.ipynb` | The notebook version. |
 | `environment.yml` | Conda environment for GeoLab (or any conda install). |
@@ -22,7 +22,7 @@ Both produce identical STL files.
 | `dem/` | Elevation data (DEMs) downloaded from USGS 3DEP, reused by later builds. |
 | `stl/` | Built STL files, and zipped copies made for email. |
 | `preview/` | Hillshade previews of the built models. |
-| `tiff/` | Other GeoTIFF files. The app and the notebook don't write to it. |
+| `tiff/` | NDVI images for the app's 3D view, from the earliest and latest Landsat imagery, reused by later builds. |
 | `emails.json` | A record of the emails the app has tried to send, created with the first one (see [Email log](#email-log)). |
 
 The app and the notebook create `dem/`, `stl/`, `preview/` and `tiff/` when they start, if they don't exist. Git doesn't keep empty folders, so a fresh clone doesn't have them.
@@ -84,11 +84,33 @@ The app runs as long as the terminal command is running. Stop it with **Ctrl+C**
 
 1. Choose a **Place** and set the **Vertical exaggeration** in the sidebar.
 2. Click **Build model**. The sidebar shows a summary, and the main area shows the model:
-   - **3D view** draws the model at its printed proportions, so it shows how the exaggeration will look on the print. Drag to rotate, scroll to zoom, and right-drag to pan.
+   - **3D view** draws the model at its printed proportions, so it shows how the exaggeration will look on the print. Buttons at its top left colour the surface by **Elevation**, or by vegetation (NDVI) from the earliest Landsat imagery of the place (**NDVI 1972**) or the latest (**NDVI 2026**, for example); see [NDVI layers](#ndvi-layers). Drag to rotate, scroll to zoom, and right-drag to pan. Its axes show longitude, latitude and elevation in metres, and hovering over the surface shows the elevation, latitude and longitude of a point and, on an NDVI layer, its NDVI. The exaggeration only changes how tall the view is drawn: the elevations shown are real.
    - **Hillshade** shows a shaded-relief map of the area.
 3. Click **Download** to save the STL (about 50 MB), or email it (see below).
 
-Built STLs are saved in `stl/`, previews in `preview/`, and downloaded elevation data in `dem/`, all in the project folder (next to `app/`). Each model takes about 50 MB in `stl/`, plus 15 MB for the zip if you email it, so delete old ones when you no longer need them.
+Built STLs are saved in `stl/`, previews in `preview/`, downloaded elevation data in `dem/`, and NDVI images in `tiff/`, all in the project folder (next to `app/`). Each model takes about 50 MB in `stl/`, plus 15 MB for the zip if you email it, so delete old ones when you no longer need them.
+
+### NDVI layers
+
+The buttons at the top left of the 3D view switch the surface colours between three layers. Switching is instant and keeps your view of the model:
+
+- **Elevation** (shown first) colours the surface by height.
+- **NDVI 1972** shows vegetation from the **earliest available Landsat imagery** of the place. For the built-in places, that's **Landsat 1 in July–September 1972**, the first summer after the first Landsat satellite was launched. Mount St Helens is the exception: its first layer is **NDVI 1979**, from the last summer before the eruption (see below).
+- **NDVI 2026** (or the latest year with imagery) shows vegetation from the **latest July–September Landsat imagery**, from Landsat 8 and 9. It uses the same time of year as the earliest layer, so the two compare like with like, rather than with autumn snow.
+
+NDVI (Normalized Difference Vegetation Index) measures how green the vegetation is. It runs from about −0.2 for water and snow, through 0–0.2 for bare rock and soil, to 0.8 or more for dense forest. The colour bar beside the view shows the scale. The view's subtitle and the sidebar summary show which satellites took each layer's imagery and when.
+
+- **Mount St Helens:** the first layer comes from **July–September 1979** (Landsat 2, 19 Jul 1979), the last summer before the eruption of 18 May 1980. It shows the forest and the summit snowfields before the eruption, draped over today's crater, because the elevation data is from after the eruption. The latest layer shows the bare crater and blast zone, and the regrowth around them.
+- **Choosing a period for a place:** to take a place's first layer from a particular period instead of the earliest imagery, add it to `NDVI_EARLY_PERIODS` near the top of `app/terrain.py`, with the first and last dates and a short note shown with the layer, then restart the app (or re-run the notebook's cells). For example, Mount St Helens has `('1979-07-01', '1979-09-30', 'before the 18 May 1980 eruption')`. A saved layer from another period is downloaded again.
+- **How the imagery is chosen:** the app searches the USGS Landsat Collection 2 archive on [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/) for scenes with 10% cloud cover or less. The earliest layer uses terrain-corrected Level-1 scenes, earliest first. The latest layer uses Level-2 scenes from July–September, newest first, going back up to 5 years. When a place sits at the edge of a scene, as Mt Hood and the Grand Tetons do, the app fills the gap with other scenes taken within 31 days.
+- **Clouds:** for the latest layer, each pixel comes from the first scene where Landsat's quality band marks it clear of cloud and cloud shadow. If no scene does, it comes from the first scene with data there. Over mountains, the quality band also flags bright rock, glacier edges and deep valley shadows, so it's used as a preference, not a mask. Landsat 1's cloud flag marks glaciers as cloud, so the earliest layer relies on the scenes' low overall cloud cover instead.
+- **How NDVI is calculated:** (near-infrared − red) ÷ (near-infrared + red). The earliest layer uses top-of-atmosphere reflectance, and for Landsat 1–5 MSS imagery, band 5 (red) and band 7 (near-infrared), the bands NDVI was first defined with in the early 1970s. The latest layer uses surface reflectance.
+- **Caching:** each layer is saved in `tiff/` as a GeoTIFF in the place's UTM zone (`ndvi_earliest_…` and `ndvi_latest_…`), which opens in QGIS or any GIS. The scene IDs and dates are stored in the file's description. The latest layer is downloaded again after 30 days, to pick up new imagery; if that fails, the saved copy is used. Delete a file to download it again.
+- **No internet connection or no imagery:** the model still builds without the missing layers, and the sidebar summary says why each one is missing. If neither NDVI layer is available, the view is coloured by elevation with no buttons.
+
+Getting both layers adds about 5–20 seconds to the first build of a place. Snow and glaciers have low NDVI, so snowy peaks such as Mt Rainier show as blue-grey or tan near the summit. Landsat 1's sensor also left faint horizontal stripes in the imagery.
+
+The notebook's 3D view has the same layers. It uses the app's code in `app/terrain.py` for them, so keep the `app` folder next to the notebook. The two share the NDVI files in `tiff/`.
 
 ## Emailing models
 
@@ -178,7 +200,7 @@ The build takes a few minutes. Then open the notebook, go to **Kernel → Change
 
 1. Open `make_stl.ipynb` and choose **Kernel → Restart Kernel and Run All Cells**.
 2. A form appears at the bottom of the notebook. Choose a **Place**, set the **Exaggeration**, and click **Build model**.
-3. When the build finishes, the form shows a summary, the hillshade preview, and the 3D view. The STL is saved in `stl/` and the preview in `preview/`.
+3. When the build finishes, the form shows a summary, which NDVI imagery was found, the hillshade preview, and the 3D view. Use the buttons at the top left of the view to switch between elevation and the NDVI layers (see [NDVI layers](#ndvi-layers)). The STL is saved in `stl/` and the preview in `preview/`.
 
 To build another model, change the form and click **Build model** again. To download the STL, open the `stl` folder in the File Browser, right-click the file and choose **Download**.
 
